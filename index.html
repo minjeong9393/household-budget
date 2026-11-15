@@ -360,6 +360,21 @@ body.sheet-open { overflow: hidden; }
   border: 1px solid transparent;
 }
 .chip.on { background: var(--accent-soft); color: var(--accent-dark); border-color: #cfdcff; }
+.chip.addchip { background: #fff; color: var(--accent-dark); border: 1px dashed #b9ccff; }
+.chip.addchip[aria-expanded="true"] { background: var(--accent-soft); border-style: solid; }
+.payadd { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+.payadd input, .sform .payadd input {
+  height: 38px; flex: 1; min-width: 0; font-size: 13.5px;
+}
+.payadd .btn { flex: none; height: 38px; }
+.payhead, .payrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) 26px;
+  gap: 7px; align-items: center;
+}
+.payhead { padding: 4px 0 2px; font-size: 10.5px; color: var(--ink3); font-weight: 700; }
+.payrow { padding: 2px 0; }
+.sform .payrow input { height: 40px; font-size: 14px; }
+.paylist { padding-bottom: 2px; }
 .toggle {
   height: 28px; padding: 0 9px; border-radius: 8px; font-size: 11.5px; font-weight: 800;
   background: #f1f4fa; color: var(--ink3);
@@ -902,7 +917,110 @@ var INVITE_BASE = 'https://minjeong9393.github.io/household-budget/';
 /* 샘플(미리보기) — 배포본에서는 이 블록이 통째로 지워진다. 모두 가상의 숫자다. */
 var SAMPLE = null;
 
-var PAY_METHODS = ['카드', '현금', '계좌이체', '자동이체', '간편결제'];
+/* 결제수단 — 기본값은 앱에 들어 있고, 사용자가 직접 추가·수정·삭제한다 (state.payMethods) */
+function defaultPayMethods() {
+  return ['카드', '현금', '계좌이체', '자동이체', '간편결제'];
+}
+function cleanPayMethod(name) {
+  return String(name == null ? '' : name).replace(/\s+/g, ' ').trim().slice(0, 20);
+}
+function samePay(a, b) { return cleanPayMethod(a).toLowerCase() === cleanPayMethod(b).toLowerCase(); }
+/* 배열 → 깨끗한 결제수단 목록 (빈 값·중복 제거, 20자 제한, 비면 기본값) */
+function normalizePayMethods(raw) {
+  var list = Array.isArray(raw) ? raw : [];
+  var out = [], seen = {};
+  list.forEach(function (v) {
+    var s = cleanPayMethod(v);
+    if (!s) return;
+    var k = s.toLowerCase();
+    if (seen[k]) return;
+    seen[k] = 1;
+    if (out.length < 30) out.push(s);
+  });
+  return out.length ? out : defaultPayMethods();
+}
+/* 화면에 보여 줄 순서 — 저장된 결제수단 먼저, 그다음 지난 기록에만 남은 이름 */
+function payMethodChips() {
+  var out = [], seen = {};
+  normalizePayMethods(state.payMethods).forEach(function (p) { if (!seen[p]) { seen[p] = 1; out.push(p); } });
+  state.tx.forEach(function (t) {
+    var p = cleanPayMethod(t.pay);
+    if (p && !seen[p]) { seen[p] = 1; out.push(p); }
+  });
+  return out;
+}
+function addPayMethod(name) {
+  var s = cleanPayMethod(name);
+  if (!s) return '';
+  if (!state.payMethods || !state.payMethods.length) state.payMethods = defaultPayMethods();
+  var hit = '';
+  state.payMethods.forEach(function (p) { if (samePay(p, s)) hit = p; });
+  if (hit) return hit;
+  state.payMethods.push(s);
+  saveState();
+  if (typeof syncPushMeta === 'function') syncPushMeta();
+  return s;
+}
+/* 이름을 바꾸면 그 이름으로 적힌 지난 기록도 함께 바뀐다 */
+function renamePayMethod(oldName, newName) {
+  var from = cleanPayMethod(oldName), to = cleanPayMethod(newName);
+  if (!from || !to) return false;
+  var list = normalizePayMethods(state.payMethods);
+  var idx = -1;
+  list.forEach(function (p, i) { if (p === from) idx = i; });
+  if (idx < 0) return false;
+  if (from === to) return true;
+  if (list.some(function (p, i) { return i !== idx && samePay(p, to); })) return false;
+  list[idx] = to;
+  state.payMethods = list;
+  var touched = false;
+  state.tx.forEach(function (t) { if (t.pay === from) { t.pay = to; touched = true; } });
+  saveState();
+  if (typeof syncPushMeta === 'function') syncPushMeta();
+  if (touched && typeof syncPushAll === 'function') syncPushAll();
+  return true;
+}
+/* 목록에서만 뺀다 — 지난 기록의 결제수단 글자는 그대로 둔다 */
+function removePayMethod(name) {
+  var s = cleanPayMethod(name);
+  if (!s) return false;
+  var list = normalizePayMethods(state.payMethods);
+  var out = list.filter(function (p) { return p !== s; });
+  if (out.length === list.length) return false;
+  state.payMethods = out.length ? out : defaultPayMethods();
+  saveState();
+  if (typeof syncPushMeta === 'function') syncPushMeta();
+  return true;
+}
+/* 관리 화면 저장 — 줄 순서대로 이름을 바꾸고, 새 이름은 더하고, 빠진 이름은 뺀다
+ *   rows: [{ name: '새 이름', was: '예전 이름' }]  또는  ['이름', ...] */
+function setPayMethods(rows) {
+  var list = Array.isArray(rows) ? rows : [];
+  var old = normalizePayMethods(state.payMethods).slice();
+  var useWas = list.some(function (r) { return r && typeof r === 'object'; });
+  var next = [], pairs = [], seen = {};
+  list.forEach(function (v, i) {
+    var name = cleanPayMethod(v && typeof v === 'object' ? v.name : v);
+    var was = cleanPayMethod(v && typeof v === 'object' ? v.was : '');
+    if (!name) return;
+    var k = name.toLowerCase();
+    if (seen[k]) return;
+    seen[k] = 1;
+    next.push(name);
+    if (!useWas) was = old[i] || '';
+    if (was && was !== name) pairs.push([was, name]);
+  });
+  if (!next.length) next = defaultPayMethods();
+  state.payMethods = next;
+  var touched = false;
+  pairs.forEach(function (pr) {
+    state.tx.forEach(function (t) { if (t.pay === pr[0]) { t.pay = pr[1]; touched = true; } });
+  });
+  saveState();
+  if (typeof syncPushMeta === 'function') syncPushMeta();
+  if (touched && typeof syncPushAll === 'function') syncPushAll();
+  return { list: next, renamed: pairs, touched: touched };
+}
 
 function defaultCats() {
   return [
@@ -1029,7 +1147,7 @@ var ui = {
 
 function normalize(raw) {
   var src = (raw && typeof raw === 'object') ? raw : {};
-  var st = { v: APP_VERSION, tx: [], cats: [], loans: [], settings: defaultSettings() };
+  var st = { v: APP_VERSION, tx: [], cats: [], loans: [], settings: defaultSettings(), payMethods: [] };
   var cats = Array.isArray(src.cats) ? src.cats : [];
   var seen = {};
   cats.forEach(function (c, i) {
@@ -1067,7 +1185,7 @@ function normalize(raw) {
       desc: String(t.desc || '').slice(0, 60),
       memo: String(t.memo || '').slice(0, 80),
       cat: cat,
-      pay: type === 'expense' ? String(t.pay || '').slice(0, 12) : '',
+      pay: type === 'expense' ? String(t.pay || '').slice(0, 20) : '',
       ts: int(t.ts) || 0
     });
   });
@@ -1110,6 +1228,8 @@ function normalize(raw) {
   st.settings.negCarry = s.negCarry !== false;
   st.settings.incomePlan = Math.max(0, int(s.incomePlan));
 
+  st.payMethods = normalizePayMethods(src.payMethods);
+
   st.tx.sort(function (a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : (b.ts || 0) - (a.ts || 0); });
   return st;
 }
@@ -1127,6 +1247,7 @@ function lsSet(k, v) {
 function saveState() {
   var ok = lsSet(STORE, JSON.stringify({
     v: APP_VERSION, tx: state.tx, cats: state.cats, loans: state.loans, settings: state.settings,
+    payMethods: state.payMethods,
     savedAt: Date.now()
   }));
   if (ok) metaSet({ savedAt: Date.now() });
@@ -1563,7 +1684,8 @@ function csvText(m) {
 function backupObject() {
   return {
     v: APP_VERSION, app: APP_NAME, exportedAt: new Date().toISOString(),
-    tx: state.tx, cats: state.cats, loans: state.loans, settings: state.settings
+    tx: state.tx, cats: state.cats, loans: state.loans, settings: state.settings,
+    payMethods: state.payMethods
   };
 }
 function importObject(obj) {
@@ -1572,6 +1694,7 @@ function importObject(obj) {
   state.cats = st.cats;
   state.loans = st.loans;
   state.settings = st.settings;
+  state.payMethods = st.payMethods;
   saveState();
   syncPushAll();
   return st;
@@ -1727,6 +1850,7 @@ function metaPayload() {
   return {
     cats: state.cats,
     settings: state.settings,
+    payMethods: normalizePayMethods(state.payMethods),
     updatedAt: Date.now()
   };
 }
@@ -1853,12 +1977,18 @@ function mergeRecords(localList, remoteMap, isLoan) {
 }
 function applyRemoteMeta(meta) {
   if (!meta || typeof meta !== 'object') return false;
-  var cats = Array.isArray(meta.cats) ? meta.cats : null;
-  if (!cats || !cats.length) return false;
-  var cleaned = normalize({ cats: cats, tx: [], loans: [], settings: meta.settings || {} });
   var changed = false;
-  if (JSON.stringify(cleaned.cats) !== JSON.stringify(state.cats)) { state.cats = cleaned.cats; changed = true; }
-  if (JSON.stringify(cleaned.settings) !== JSON.stringify(state.settings)) { state.settings = cleaned.settings; changed = true; }
+  var cats = Array.isArray(meta.cats) ? meta.cats : null;
+  if (cats && cats.length) {
+    var cleaned = normalize({ cats: cats, tx: [], loans: [], settings: meta.settings || {} });
+    if (JSON.stringify(cleaned.cats) !== JSON.stringify(state.cats)) { state.cats = cleaned.cats; changed = true; }
+    if (JSON.stringify(cleaned.settings) !== JSON.stringify(state.settings)) { state.settings = cleaned.settings; changed = true; }
+  }
+  /* payMethods 가 없는 옛 방은 그대로 두고, 있는 방만 따른다 */
+  if (Array.isArray(meta.payMethods) && meta.payMethods.length) {
+    var pm = normalizePayMethods(meta.payMethods);
+    if (JSON.stringify(pm) !== JSON.stringify(normalizePayMethods(state.payMethods))) { state.payMethods = pm; changed = true; }
+  }
   return changed;
 }
 
@@ -1887,6 +2017,8 @@ function syncPull(opts) {
       }
       if (ml.list.length !== state.loans.length || ml.dirty) { state.loans = ml.list; changed = true; }
       if (applyRemoteMeta(room.meta)) changed = true;
+      /* 옛 방(meta 에 payMethods 없음)이면 이 기기의 결제수단을 방에 올려 둔다 */
+      var metaNeedsPays = !!(room.meta && typeof room.meta === 'object' && !Array.isArray(room.meta.payMethods));
       if (changed) saveState();
       metaSet({ lastSync: Date.now() });
 
@@ -1897,6 +2029,7 @@ function syncPull(opts) {
       if (mt.dirty || ml.dirty) {
         return syncPushAll().then(function () { syncStartStream(); return changed; });
       }
+      if (metaNeedsPays) syncPushMeta();
       syncStartStream();
       return changed;
     });
@@ -2241,6 +2374,7 @@ function renderSidenav() {
     }).join('') + '</div>' +
     '<div class="navgroup tools">' +
     '<button type="button" class="navitem" data-act="openBudget">' + icon('gear', 19) + '<span>예산·이월 설정</span></button>' +
+    '<button type="button" class="navitem" data-act="openPayMethods">' + icon('card', 19) + '<span>결제수단 관리</span></button>' +
     '<button type="button" class="navitem" data-act="exportXlsx">' + icon('doc', 19) + '<span>엑셀 내보내기</span></button>' +
     '<button type="button" class="navitem" data-act="openSync">' + icon('cloud', 19) + '<span>남편과 연동</span></button>' +
     '</div>' +
@@ -2382,9 +2516,7 @@ function txPanel(compact) {
   var exp = sumOf(list, 'expense');
   var inc = sumOf(list, 'income');
   var cats = catsOf('expense').concat(catsOf('income'));
-  var pays = PAY_METHODS.filter(function (p) {
-    return state.tx.some(function (t) { return t.pay === p; });
-  });
+  var pays = payMethodChips();
 
   var toolbar = '<div class="txtools">' +
     '<div class="searchbox">' + icon('search', 17) +
@@ -2542,6 +2674,7 @@ function closeSheet() {
   ui.sheet = null;
   ui.form = {};
   ui.draft = null;
+  ui.payDraft = null;
   renderSheet();
 }
 function renderSheet() {
@@ -2558,6 +2691,9 @@ function renderSheet() {
   } else if (s === 'budget') {
     title = '예산 · 이월 설정';
     body = budgetSheet();
+  } else if (s === 'pay') {
+    title = '결제수단 관리';
+    body = paySheet();
   } else if (s === 'loan') {
     title = ui.form.id ? '대출 수정' : '대출 추가';
     body = loanSheet();
@@ -2580,6 +2716,16 @@ function renderSheet() {
     '<button type="button" class="iconbtn" data-act="closeSheet" aria-label="닫기">✕</button></div>' +
     '<div class="sheet-body">' + body + '</div>' +
     '</div></div>';
+}
+
+/* 기록 시트의 결제수단 칩 — 저장된 목록 + (지난 기록에만 남은 이름) + 지금 고른 이름 */
+function paySheetChips(current) {
+  var list = payMethodChips();
+  var cur = cleanPayMethod(current);
+  if (cur && list.indexOf(cur) < 0) list = list.concat([cur]);
+  return list.map(function (p) {
+    return '<button type="button" class="chip' + (cur === p ? ' on' : '') + '" data-act="setPay" data-pay="' + esc(p) + '">' + esc(p) + '</button>';
+  }).join('');
 }
 
 function txSheet() {
@@ -2605,10 +2751,16 @@ function txSheet() {
     '</div>' +
     '<label class="field"><span class="lbl">설명</span>' +
     '<input name="desc" value="' + esc(f.desc || '') + '" placeholder="' + (type === 'income' ? '예: 급여' : '예: 마트 장보기') + '" autocomplete="off"></label>' +
-    (type === 'expense' ? '<div class="field"><span class="lbl">결제수단</span><div class="chiprow">' +
-      PAY_METHODS.map(function (p) {
-        return '<button type="button" class="chip' + (f.pay === p ? ' on' : '') + '" data-act="setPay" data-pay="' + esc(p) + '">' + esc(p) + '</button>';
-      }).join('') + '</div></div>' : '') +
+    (type === 'expense' ? '<div class="field"><span class="lbl">결제수단</span><div class="chiprow paychips">' +
+      paySheetChips(f.pay) +
+      '<button type="button" class="chip addchip" data-act="togglePayAdd" aria-expanded="' + (f.payAdd ? 'true' : 'false') + '">' +
+      (f.payAdd ? '닫기' : '+ 추가') + '</button></div>' +
+      (f.payAdd ? '<div class="payadd">' +
+        '<input class="paynew" data-paynew maxlength="20" autocomplete="off" aria-label="새 결제수단 이름" ' +
+        'placeholder="예: 우리카드" value="' + esc(f.payNew || '') + '">' +
+        '<button type="button" class="btn primary sm" data-act="savePayNew">추가</button></div>' +
+        '<p class="hintline">추가한 결제수단은 바로 골라지고, 남편 기기에도 함께 보여요.</p>' : '') +
+      '</div>' : '') +
     '<label class="field"><span class="lbl">메모</span>' +
     '<input name="memo" value="' + esc(f.memo || '') + '" placeholder="선택" autocomplete="off"></label>' +
     '<div class="sheet-foot">' +
@@ -2672,6 +2824,27 @@ function budgetSheet() {
     incIdx.map(function (i) { return row(i, d.cats[i]); }).join('') +
     '<button type="button" class="btn ghost sm addcat" data-act="addCat" data-kind="income">' + icon('plus', 15) + '카테고리 추가</button>' +
     '</div>' +
+    '<div class="sheet-foot"><span></span><button type="submit" class="btn primary">저장</button></div>' +
+    '</form>';
+}
+
+function paySheet() {
+  if (!ui.payDraft) {
+    ui.payDraft = normalizePayMethods(state.payMethods).map(function (p) { return { name: p, was: p }; });
+  }
+  var d = ui.payDraft;
+  return '<form data-form="pay" class="sform" novalidate>' +
+    '<p class="hintline">기록할 때 고를 결제수단이에요. 카드 이름이나 계좌 이름을 그대로 넣어 두세요.</p>' +
+    (d.length ? '<div class="payhead"><span>이름</span><span></span></div>' +
+      '<div class="paylist">' + d.map(function (r, i) {
+        return '<div class="payrow" data-payrow="' + i + '">' +
+          '<input class="payname" data-payfield="name" data-idx="' + i + '" maxlength="20" value="' + esc(r.name) + '" aria-label="결제수단 이름">' +
+          '<button type="button" class="iconbtn tiny" data-act="delPayDraft" data-idx="' + i + '" aria-label="결제수단 삭제">✕</button>' +
+          '</div>';
+      }).join('') + '</div>'
+      : '<p class="empty-line">결제수단이 없어요. 아래에서 추가해 주세요.</p>') +
+    '<button type="button" class="btn ghost sm addcat" data-act="addPayDraft">' + icon('plus', 15) + '새 결제수단</button>' +
+    '<p class="hintline">이름을 바꾸면 그 결제수단으로 적어 둔 지난 기록도 함께 바뀌어요.</p>' +
     '<div class="sheet-foot"><span></span><button type="submit" class="btn primary">저장</button></div>' +
     '</form>';
 }
@@ -2742,6 +2915,8 @@ function moreSheet() {
   return '<div class="menulist">' +
     '<button type="button" class="menurow" data-act="openBudget">' + icon('gear', 19) +
     '<span><b>예산 · 이월 설정</b><em>카테고리, 월 예산, 이월 ON/OFF</em></span></button>' +
+    '<button type="button" class="menurow" data-act="openPayMethods">' + icon('card', 19) +
+    '<span><b>결제수단 관리</b><em>카드 · 계좌 이름 추가·수정·삭제</em></span></button>' +
     '<button type="button" class="menurow" data-act="exportXlsx">' + icon('doc', 19) +
     '<span><b>엑셀(.xlsx) 내보내기</b><em>요약 · 거래 · 대출 · 누적 저축 4장</em></span></button>' +
     '<button type="button" class="menurow" data-act="exportCsv">' + icon('list', 19) +
@@ -2843,6 +3018,30 @@ function exportJson() {
 
 /* ---------- 기록 저장 ---------- */
 function currentForm() { return document.querySelector('#sheetroot form'); }
+/* 시트를 다시 그리기 전에 입력한 값을 ui.form 에 담아 둔다 (반쯤 쓴 기록을 잃지 않게) */
+function captureTxForm() {
+  var form = document.querySelector('#sheetroot form[data-form="tx"]');
+  if (!form || !ui.form) return {};
+  var v = formValues(form);
+  ui.form.amount = int(v.amount);
+  if (v.date) ui.form.date = v.date;
+  ui.form.desc = String(v.desc || '');
+  ui.form.memo = String(v.memo || '');
+  if (v.cat) ui.form.cat = v.cat;
+  var pn = form.querySelector('[data-paynew]');
+  if (pn) ui.form.payNew = String(pn.value || '').slice(0, 20);
+  return v;
+}
+function syncPayDraftFromForm() {
+  if (!ui.payDraft) return;
+  var form = document.querySelector('#sheetroot form[data-form="pay"]');
+  if (!form) return;
+  Array.prototype.forEach.call(form.querySelectorAll('[data-payfield="name"]'), function (f) {
+    var i = int(f.getAttribute('data-idx'));
+    var r = ui.payDraft[i];
+    if (r) r.name = String(f.value || '').slice(0, 20);
+  });
+}
 function formValues(form) {
   var out = {};
   if (!form) return out;
@@ -2908,6 +3107,18 @@ function submitBudget(form) {
   render();
   toast('저장했어요');
 }
+function submitPay(form) {
+  var rows = [];
+  Array.prototype.forEach.call(form.querySelectorAll('[data-payfield="name"]'), function (f, i) {
+    var r = ui.payDraft && ui.payDraft[i];
+    rows.push({ name: String(f.value || ''), was: r ? r.was : '' });
+  });
+  var res = setPayMethods(rows);
+  ui.payDraft = null;
+  closeSheet();
+  render();
+  toast('결제수단 ' + res.list.length + '개를 저장했어요');
+}
 function submitLoan(form) {
   var v = formValues(form);
   var name = String(v.name || '').trim();
@@ -2958,25 +3169,50 @@ var actions = {
     openSheet('tx', Object.assign({}, t));
   },
   setTxType: function (d) {
-    var form = currentForm();
-    var v = form ? formValues(form) : {};
+    captureTxForm();
     ui.form.type = d.type;
-    ui.form.amount = int(v.amount);
-    ui.form.date = v.date;
-    ui.form.desc = v.desc;
-    ui.form.memo = v.memo;
     ui.form.cat = '';
     renderSheet();
   },
   setPay: function (d) {
-    ui.form.pay = ui.form.pay === d.pay ? '' : d.pay;
-    var form = currentForm();
-    var v = form ? formValues(form) : {};
-    ui.form.amount = int(v.amount);
-    ui.form.date = v.date;
-    ui.form.desc = v.desc;
-    ui.form.memo = v.memo;
-    ui.form.cat = v.cat;
+    var next = ui.form.pay === d.pay ? '' : d.pay;
+    captureTxForm();
+    ui.form.pay = next;
+    renderSheet();
+  },
+  togglePayAdd: function () {
+    captureTxForm();
+    ui.form.payAdd = !ui.form.payAdd;
+    if (!ui.form.payAdd) ui.form.payNew = '';
+    renderSheet();
+    if (ui.form.payAdd) {
+      var box = document.querySelector('#sheetroot [data-paynew]');
+      if (box) { try { box.focus(); } catch (e) { } }
+    }
+  },
+  savePayNew: function () {
+    captureTxForm();
+    var name = addPayMethod(ui.form.payNew || '');
+    if (!name) { toast('결제수단 이름을 넣어 주세요'); return; }
+    ui.form.pay = name;
+    ui.form.payNew = '';
+    ui.form.payAdd = false;
+    renderSheet();
+    toast('결제수단 "' + name + '" 추가 · 바로 골라 뒀어요');
+  },
+  openPayMethods: function () { ui.payDraft = null; openSheet('pay'); },
+  addPayDraft: function () {
+    syncPayDraftFromForm();
+    if (!ui.payDraft) ui.payDraft = [];
+    ui.payDraft.push({ name: '', was: '' });
+    renderSheet();
+    var inputs = document.querySelectorAll('#sheetroot [data-payfield="name"]');
+    if (inputs.length) { try { inputs[inputs.length - 1].focus(); } catch (e) { } }
+  },
+  delPayDraft: function (d) {
+    syncPayDraftFromForm();
+    var i = int(d.idx);
+    if (ui.payDraft && ui.payDraft[i]) ui.payDraft.splice(i, 1);
     renderSheet();
   },
   saveTx: function () { var f = currentForm(); if (f) submitTx(f); },
@@ -3232,6 +3468,7 @@ document.addEventListener('submit', function (e) {
   e.preventDefault();
   if (kind === 'tx') submitTx(form);
   else if (kind === 'budget') submitBudget(form);
+  else if (kind === 'pay') submitPay(form);
   else if (kind === 'loan') submitLoan(form);
   else if (kind === 'repay') submitRepay(form);
   else if (kind === 'joinRoom') {
@@ -3248,6 +3485,14 @@ document.addEventListener('submit', function (e) {
 
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape' && ui.sheet) closeSheet();
+});
+/* 새 결제수단 입력칸에서 Enter → 기록을 저장하지 않고 결제수단만 더한다 */
+document.addEventListener('keydown', function (e) {
+  var t = e.target;
+  if (!t || !t.hasAttribute || !t.hasAttribute('data-paynew')) return;
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  actions.savePayNew();
 });
 
 function updateLivePreview() {
@@ -3349,6 +3594,9 @@ window.__budgetApp = {
   APP_NAME: APP_NAME, DB_URL: DB_URL, INVITE_BASE: INVITE_BASE,
   render: render, openSheet: openSheet, closeSheet: closeSheet,
   addTx: addTx, updateTx: updateTx, delTx: delTx,
+  addPayMethod: addPayMethod, renamePayMethod: renamePayMethod, removePayMethod: removePayMethod,
+  setPayMethods: setPayMethods, payMethodChips: payMethodChips, defaultPayMethods: defaultPayMethods,
+  normalizePayMethods: normalizePayMethods,
   addLoan: addLoan, updateLoan: updateLoan, delLoan: delLoan, repayLoan: repayLoan,
   rolloverTable: rolloverTable, incomeTable: incomeTable, savingsTable: savingsTable, savingsOf: savingsOf,
   loanSummary: loanSummary, monthTotals: monthTotals, loanMonthly: loanMonthly,
