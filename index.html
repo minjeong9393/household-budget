@@ -209,12 +209,15 @@ input, select, textarea { font-family: inherit; font-size: 16px; color: inherit;
 .txtools { display: flex; gap: 7px; margin-bottom: 8px; }
 .searchbox { position: relative; flex: 1 1 100%; display: flex; align-items: center; }
 .txfilters {
-  display: flex; align-items: center; gap: 7px; margin-bottom: 10px;
-  overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-bottom: 10px;
+  padding-bottom: 2px;
 }
 .txfilters::-webkit-scrollbar { display: none; }
 .txfilters .seg { flex: none; }
 .txfilters .minisel { flex: 1 1 0; min-width: 0; max-width: none; }
+/* 결제수단 이름은 직접 정하므로(카드·계좌 이름) 조금 더 넓게 — 모자라면 다음 줄로 넘어간다 */
+.txfilters select[data-act="setFilterPay"] { flex: 1.35 1 0; min-width: 88px; }
+.txfilters select[data-act="setFilterCat"] { min-width: 76px; }
 .txfilters .linkbtn { flex: none; }
 .searchbox .ic { position: absolute; left: 11px; color: var(--ink3); }
 .txsearch {
