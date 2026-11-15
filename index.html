@@ -1475,18 +1475,19 @@ function xlsxSheets(m) {
         { v: '카테고리', s: XL_STYLE.head }, { v: '결제수단', s: XL_STYLE.head }, { v: '금액', s: XL_STYLE.head },
         { v: '메모', s: XL_STYLE.head }
       ]];
-      var list = state.tx.filter(function (t) { return monthOf(t.date) === month; });
-      list.slice().reverse().forEach(function (t) {
+      var list = state.tx.slice().reverse();
+      list.forEach(function (t) {
         rows.push([
           t.date, t.type === 'income' ? '수입' : '지출', t.desc || '', catName(t.cat),
           t.type === 'expense' ? payName(t.pay) : '', { v: t.amount, s: XL_STYLE.num }, t.memo || ''
         ]);
       });
-      var tot = monthTotals(month);
+      var income = list.reduce(function (a, t) { return a + (t.type === 'income' ? t.amount : 0); }, 0);
+      var expense = list.reduce(function (a, t) { return a + (t.type === 'expense' ? t.amount : 0); }, 0);
       rows.push([]);
-      rows.push([{ v: '수입 합계', s: XL_STYLE.total }, '', '', '', '', { v: tot.income, s: XL_STYLE.total }, '']);
-      rows.push([{ v: '지출 합계', s: XL_STYLE.total }, '', '', '', '', { v: tot.expense, s: XL_STYLE.total }, '']);
-      rows.push([{ v: '저축', s: XL_STYLE.total }, '', '', '', '', { v: tot.save, s: XL_STYLE.total }, '']);
+      rows.push([{ v: '전체 수입', s: XL_STYLE.total }, '', '', '', '', { v: income, s: XL_STYLE.total }, '']);
+      rows.push([{ v: '전체 지출', s: XL_STYLE.total }, '', '', '', '', { v: expense, s: XL_STYLE.total }, '']);
+      rows.push([{ v: '전체 저축', s: XL_STYLE.total }, '', '', '', '', { v: income - expense, s: XL_STYLE.total }, '']);
       return rows;
     })()
   };
