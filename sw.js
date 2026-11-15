@@ -1,14 +1,14 @@
 /* 서비스워커 — 홈 화면 설치 · 오프라인에서도 열리게
  * 화면(HTML)은 네트워크 우선, 아이콘은 캐시 우선. */
-const CACHE = 'household-budget-v1';
+const CACHE = 'household-budget-v2';
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './favicon.png?v=1',
-  './icon-192.png?v=1',
-  './icon-512.png?v=1',
-  './icon-maskable-512.png?v=1'
+  './favicon.png?v=2',
+  './icon-192.png?v=2',
+  './icon-512.png?v=2',
+  './icon-maskable-512.png?v=2'
 ];
 
 self.addEventListener('install', (e) => {
