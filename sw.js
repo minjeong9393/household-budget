@@ -1,6 +1,6 @@
 /* 서비스워커 — 홈 화면 설치 · 오프라인에서도 열리게
  * 화면(HTML)은 네트워크 우선, 아이콘은 캐시 우선. */
-const CACHE = 'household-budget-v3';
+const CACHE = 'household-budget-v4';
 const ASSETS = [
   './',
   './index.html',

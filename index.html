@@ -200,6 +200,46 @@ input, select, textarea { font-family: inherit; font-size: 16px; color: inherit;
 .prow.ptotal .pbar-mini { display: none; }
 .table-note { font-size: 11.5px; color: var(--ink3); margin-top: 10px; line-height: 1.5; }
 
+/* ---------- 기간 할당 (분기 · 1년) ---------- */
+.pbadge {
+  font-style: normal; font-size: 9.5px; font-weight: 800; letter-spacing: -.2px;
+  padding: 1px 5px; border-radius: 6px; flex: none;
+  background: var(--accent-soft); color: var(--accent-dark);
+}
+.pbadge.quarter { background: #fff4e5; color: #b4690e; }
+.pbadge.all { background: #eef1f7; color: var(--ink2); }
+.prow .pperiod {
+  order: 6; flex: 1 0 100%; display: block;
+  min-width: 0; overflow: hidden;
+  margin-top: 7px; padding: 7px 9px; border-radius: 10px; background: #f8faff;
+}
+.prow .pperiod.off { display: none; }
+.pperiod-main { display: flex; align-items: baseline; gap: 5px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.pperiod-main b { font-size: 12.5px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pperiod-main .pslash { font-size: 11px; color: var(--ink3); }
+.pperiod-main .palloc { font-size: 11.5px; color: var(--ink2); font-variant-numeric: tabular-nums; }
+.pperiod-sub { display: block; font-size: 10.5px; color: var(--ink3); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pperiod-sub b { font-weight: 800; }
+.prow .pperiod .pbar-mini { display: block; margin-top: 6px; height: 4px; }
+.prow .pperiod .pbar-mini i.over { background: var(--red); }
+
+/* 기간 할당 입력 (예산 설정 시트 — 이름/월예산/이월 아래 둘째 줄) */
+.catrow .periodcell {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 6px;
+  min-width: 0; padding: 2px 0 3px;
+}
+.catrow .periodcell .plbl { flex: none; font-size: 10.5px; font-weight: 700; color: var(--ink3); }
+.catrow .periodcell select {
+  flex: 0 0 84px; width: 84px; min-width: 0; height: 30px; font-size: 12.5px;
+  padding: 0 4px; border-radius: 9px; background: #fbfcfe; border: 1px solid var(--line2);
+}
+.catrow .periodcell input {
+  flex: 1 1 auto; width: auto; min-width: 0; height: 30px; font-size: 13px;
+  text-align: right; padding: 0 9px; border-radius: 9px;
+}
+.catrow .periodcell input:disabled { background: #f2f5fa; color: var(--ink3); }
+.catrow.hasperiod .periodcell .plbl { color: var(--accent-dark); }
+
 /* ---------- 거래 ---------- */
 .txsum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
 .tchip { background: var(--card); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow); }
@@ -592,6 +632,26 @@ body.sheet-open { overflow: hidden; }
 @media (min-width: 906px) and (max-width: 1099px) {
   .dash { grid-template-columns: minmax(0, 380px) minmax(0, 1fr); }
   .prow .pnum { font-size: 11px; }
+}
+
+/* ---------- PC: 기간 할당 열 (7번째) ---------- */
+@media (min-width: 900px) {
+  .ptable.hasperiod .ptable-head,
+  .ptable.hasperiod .prow {
+    grid-template-columns: minmax(0, 1.5fr) .72fr .72fr .82fr .82fr .92fr 1.5fr;
+  }
+  .ptable.hasperiod .ptable-head span:last-child { text-align: right; }
+  .ptable.hasperiod .ptable-head em { font-style: normal; font-weight: 600; color: var(--ink3); }
+  .ptable.hasperiod .ptable-head span:last-child em { display: block; font-size: 9.5px; }
+  .prow .pperiod {
+    order: 0; flex: none; margin: 0; padding: 0; border-radius: 0; background: none;
+    text-align: right; min-width: 0; overflow: hidden;
+  }
+  .prow .pperiod-main { justify-content: flex-end; gap: 4px; }
+  .prow .pperiod-main b { font-size: 12.5px; }
+  .prow .pperiod-sub { margin-top: 1px; text-align: right; }
+  .prow .pperiod .pbar-mini { display: none; }
+  .prow.ptotal .pperiod-main b { font-size: 12.5px; }
 }
 
 </style>
@@ -1027,23 +1087,23 @@ function setPayMethods(rows) {
 
 function defaultCats() {
   return [
-    { id: 'e1', kind: 'expense', name: '주거비', budget: 0, roll: true },
-    { id: 'e2', kind: 'expense', name: '교통비', budget: 0, roll: true },
-    { id: 'e3', kind: 'expense', name: '금융보험', budget: 0, roll: false },
-    { id: 'e4', kind: 'expense', name: '식비', budget: 0, roll: true },
-    { id: 'e5', kind: 'expense', name: '외식', budget: 0, roll: true },
-    { id: 'e6', kind: 'expense', name: '용돈1', budget: 0, roll: true },
-    { id: 'e7', kind: 'expense', name: '용돈2', budget: 0, roll: true },
-    { id: 'e8', kind: 'expense', name: '주류비', budget: 0, roll: true },
-    { id: 'e9', kind: 'expense', name: '생활용품비', budget: 0, roll: true },
-    { id: 'e10', kind: 'expense', name: '차량유지비', budget: 0, roll: true },
-    { id: 'e11', kind: 'expense', name: '문화생활비', budget: 0, roll: true },
-    { id: 'e12', kind: 'expense', name: '의류비', budget: 0, roll: true },
-    { id: 'e13', kind: 'expense', name: '의료비', budget: 0, roll: false },
-    { id: 'e14', kind: 'expense', name: '건강관리비', budget: 0, roll: true },
-    { id: 'e15', kind: 'expense', name: '교육비', budget: 0, roll: false },
-    { id: 'e16', kind: 'expense', name: '미용비', budget: 0, roll: true },
-    { id: 'e17', kind: 'expense', name: '경조사비', budget: 0, roll: true },
+    { id: 'e1', kind: 'expense', name: '주거비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e2', kind: 'expense', name: '교통비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e3', kind: 'expense', name: '금융보험', budget: 0, roll: false, period: '', periodBudget: 0 },
+    { id: 'e4', kind: 'expense', name: '식비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e5', kind: 'expense', name: '외식', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e6', kind: 'expense', name: '용돈1', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e7', kind: 'expense', name: '용돈2', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e8', kind: 'expense', name: '주류비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e9', kind: 'expense', name: '생활용품비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e10', kind: 'expense', name: '차량유지비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e11', kind: 'expense', name: '문화생활비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e12', kind: 'expense', name: '의류비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e13', kind: 'expense', name: '의료비', budget: 0, roll: false, period: '', periodBudget: 0 },
+    { id: 'e14', kind: 'expense', name: '건강관리비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e15', kind: 'expense', name: '교육비', budget: 0, roll: false, period: '', periodBudget: 0 },
+    { id: 'e16', kind: 'expense', name: '미용비', budget: 0, roll: true, period: '', periodBudget: 0 },
+    { id: 'e17', kind: 'expense', name: '경조사비', budget: 0, roll: true, period: '', periodBudget: 0 },
     { id: 'i1', kind: 'income', name: '급여', plan: 0 },
     { id: 'i2', kind: 'income', name: '보너스', plan: 0 },
     { id: 'i3', kind: 'income', name: '이자', plan: 0 },
@@ -1160,7 +1220,14 @@ function normalize(raw) {
     if (seen[id]) id = id + '-' + (i + 1);
     seen[id] = 1;
     var row = { id: id, kind: kind, name: String(c.name || (kind === 'income' ? '수입' : '지출')).slice(0, 20) };
-    if (kind === 'expense') { row.budget = Math.max(0, int(c.budget)); row.roll = c.roll !== false; }
+    if (kind === 'expense') {
+      row.budget = Math.max(0, int(c.budget));
+      row.roll = c.roll !== false;
+      /* 분기·1년 할당 예산 — 예전 저장분에는 없으므로 없으면 '없음'으로 채운다 */
+      row.period = periodKey(c.period);
+      row.periodBudget = Math.max(0, int(c.periodBudget));
+      if (!row.periodBudget || !row.period) { row.period = ''; row.periodBudget = 0; }
+    }
     else row.plan = Math.max(0, int(c.plan));
     st.cats.push(row);
   });
@@ -1325,6 +1392,61 @@ function lastMonth() {
   return cand;
 }
 
+/* ---------- 분기 · 1년 할당 예산 ---------- *
+ * 카테고리 하나에 "이 기간에 얼마"를 따로 정해 두고, 월 예산과 별도로 누적을 본다.
+ *   period       '' | 'quarter' | 'year'
+ *   periodBudget  할당 금액(0 이상 정수)
+ * 기간 시작은 달력 기준 — 1년은 그 해 1월, 분기는 1·4·7·10월부터. */
+function periodKey(p) { return p === 'quarter' || p === 'year' ? p : ''; }
+function periodLabel(p) { return p === 'year' ? '1년' : p === 'quarter' ? '분기' : ''; }
+function periodStartOf(p, m) {
+  var month = isMonthKey(m) ? m : thisMonth();
+  var year = month.slice(0, 4);
+  if (p === 'year') return year + '-01';
+  if (p === 'quarter') {
+    var mo = parseInt(month.slice(5, 7), 10) || 1;
+    return year + '-' + ('0' + (Math.floor((mo - 1) / 3) * 3 + 1)).slice(-2);
+  }
+  return '';
+}
+/* 선택한 달 m 기준 기간 누적 — sums(월→카테고리→지출합)를 주면 그걸 쓴다 */
+function expenseSumsByMonth() {
+  var sums = {};
+  state.tx.forEach(function (t) {
+    if (t.type !== 'expense' || !t.cat) return;
+    var mo = monthOf(t.date);
+    if (!isMonthKey(mo)) return;
+    if (!sums[mo]) sums[mo] = {};
+    sums[mo][t.cat] = (sums[mo][t.cat] || 0) + t.amount;
+  });
+  return sums;
+}
+function monthExpenseOf(sums, catId, mm) {
+  if (sums) return (sums[mm] && sums[mm][catId]) || 0;
+  return actualOf(mm, catId);
+}
+function periodStatsOf(c, m, sums) {
+  var target = isMonthKey(m) ? m : thisMonth();
+  var period = periodKey(c && c.period);
+  var budget = Math.max(0, int(c && c.periodBudget));
+  var start = period ? periodStartOf(period, target) : '';
+  var stat = {
+    period: period, budget: budget, start: start,
+    prior: 0, current: 0, actual: 0, left: budget, pct: 0, active: false
+  };
+  if (!period || !start || !budget) { stat.period = ''; stat.budget = 0; return stat; }
+  stat.active = true;
+  stat.current = monthExpenseOf(sums, c.id, target);
+  monthsRange(start, target).forEach(function (mm) {
+    if (mm === target) return;
+    stat.prior += monthExpenseOf(sums, c.id, mm);
+  });
+  stat.actual = stat.prior + stat.current;
+  stat.left = stat.budget - stat.actual;
+  stat.pct = budget ? (stat.actual / budget) * 100 : 0;
+  return stat;
+}
+
 /* 카테고리별 이월 계산 —
  *   한도(M) = 기본예산 + 전월이월(M)
  *   전월이월(M+1) = 이월 ON ? 남은돈(M) : 0
@@ -1335,24 +1457,35 @@ function rolloverTable(m) {
   var start = isMonthKey(state.settings.startMonth) ? state.settings.startMonth : firstMonth();
   if (start > target) start = target;
   var months = monthsRange(start, target);
-  var out = { month: target, start: start, cats: [], total: { budget: 0, carry: 0, limit: 0, actual: 0, left: 0 } };
+  var out = {
+    month: target, start: start, cats: [],
+    total: {
+      budget: 0, carry: 0, limit: 0, actual: 0, left: 0,
+      periodBudget: 0, periodPrior: 0, periodActual: 0, periodLeft: 0, periodPct: 0, periodCount: 0
+    }
+  };
   var carry = {};
   var expenseCats = catsOf('expense');
   expenseCats.forEach(function (c) { carry[c.id] = 0; });
+  var sums = expenseSumsByMonth();
 
   months.forEach(function (mm) {
     expenseCats.forEach(function (c) {
       var budget = Math.max(0, int(c.budget));
       var prev = c.roll ? (carry[c.id] || 0) : 0;
       var limit = budget + prev;
-      var actual = actualOf(mm, c.id);
+      var actual = monthExpenseOf(sums, c.id, mm);
       var left = limit - actual;
       var next = c.roll ? (state.settings.negCarry ? left : Math.max(0, left)) : 0;
       carry[c.id] = next;
       if (mm === target) {
+        var ps = periodStatsOf(c, target, sums);
         out.cats.push({
           id: c.id, name: c.name, budget: budget, carry: prev, limit: limit,
-          actual: actual, left: left, next: next, roll: !!c.roll
+          actual: actual, left: left, next: next, roll: !!c.roll,
+          period: ps.period, periodBudget: ps.budget, periodStart: ps.start,
+          periodPrior: ps.prior, periodNow: ps.current, periodActual: ps.actual,
+          periodLeft: ps.left, periodPct: ps.pct
         });
       }
     });
@@ -1363,7 +1496,15 @@ function rolloverTable(m) {
     out.total.limit += r.limit;
     out.total.actual += r.actual;
     out.total.left += r.left;
+    if (r.periodBudget > 0) {
+      out.total.periodBudget += r.periodBudget;
+      out.total.periodPrior += r.periodPrior;
+      out.total.periodActual += r.periodActual;
+      out.total.periodLeft += r.periodLeft;
+      out.total.periodCount += 1;
+    }
   });
+  out.total.periodPct = out.total.periodBudget ? (out.total.periodActual / out.total.periodBudget) * 100 : 0;
   return out;
 }
 
@@ -1543,25 +1684,48 @@ function repayLoan(id, info) {
 function monthSummaryRows(m) {
   var roll = rolloverTable(m);
   var inc = incomeTable(m);
+  var hasPeriod = roll.cats.some(function (c) { return c.periodBudget > 0; });
+  var numOr = function (v) { return v ? { v: v, s: XL_STYLE.num } : ''; };
   var rows = [];
   rows.push([{ v: APP_NAME + ' · ' + monthLabel(m), s: XL_STYLE.total }, '', '', '', '', '']);
-  rows.push([
+  var head = [
     { v: '지출 카테고리', s: XL_STYLE.head }, { v: '기본예산', s: XL_STYLE.head }, { v: '전월이월', s: XL_STYLE.head },
     { v: '이번달 한도', s: XL_STYLE.head }, { v: '실제', s: XL_STYLE.head }, { v: '남은돈', s: XL_STYLE.head },
     { v: '다음달 이월', s: XL_STYLE.head }
-  ]);
+  ];
+  if (hasPeriod) {
+    head.push(
+      { v: '할당주기', s: XL_STYLE.head }, { v: '기간할당예산', s: XL_STYLE.head }, { v: '전월까지사용', s: XL_STYLE.head },
+      { v: '기간누적사용', s: XL_STYLE.head }, { v: '기간잔여', s: XL_STYLE.head }
+    );
+  }
+  rows.push(head);
   roll.cats.forEach(function (c) {
-    rows.push([
+    var row = [
       c.name, { v: c.budget, s: XL_STYLE.num }, { v: c.carry, s: XL_STYLE.num },
       { v: c.limit, s: XL_STYLE.num }, { v: c.actual, s: XL_STYLE.num }, { v: c.left, s: XL_STYLE.num },
       { v: c.next, s: XL_STYLE.num }
-    ]);
+    ];
+    if (hasPeriod) {
+      row.push(
+        c.periodBudget ? periodLabel(c.period) : '',
+        numOr(c.periodBudget), numOr(c.periodPrior), numOr(c.periodActual), numOr(c.periodBudget ? c.periodLeft : 0)
+      );
+    }
+    rows.push(row);
   });
-  rows.push([
+  var totalRow = [
     { v: '합계', s: XL_STYLE.total }, { v: roll.total.budget, s: XL_STYLE.total }, { v: roll.total.carry, s: XL_STYLE.total },
     { v: roll.total.limit, s: XL_STYLE.total }, { v: roll.total.actual, s: XL_STYLE.total },
     { v: roll.total.left, s: XL_STYLE.total }, { v: '', s: XL_STYLE.total }
-  ]);
+  ];
+  if (hasPeriod) {
+    totalRow.push(
+      '기간 합계', numOr(roll.total.periodBudget), numOr(roll.total.periodPrior),
+      numOr(roll.total.periodActual), numOr(roll.total.periodBudget ? roll.total.periodLeft : 0)
+    );
+  }
+  rows.push(totalRow);
   rows.push([]);
   rows.push([
     { v: '수입 카테고리', s: XL_STYLE.head }, { v: '계획', s: XL_STYLE.head }, { v: '실제', s: XL_STYLE.head }, { v: '차이', s: XL_STYLE.head }
@@ -1586,7 +1750,9 @@ function xlsxSheets(m) {
 
   var sheet1 = {
     name: '월간 요약',
-    cols: [16, 14, 14, 14, 14, 14, 14],
+    cols: roll.cats.some(function (c) { return c.periodBudget > 0; })
+      ? [16, 14, 14, 14, 14, 14, 14, 10, 14, 14, 14, 14]
+      : [16, 14, 14, 14, 14, 14, 14],
     rows: monthSummaryRows(month)
   };
 
@@ -2418,6 +2584,33 @@ function monthBar() {
 }
 
 /* ---------- 요약 ---------- */
+/* 분기·1년 할당 셀 — 표에서는 '누적 / 할당' 과 '전월까지 · 잔여', 모바일에서는 서브 바 */
+function periodCell(c) {
+  if (!c.periodBudget) return '<span class="pperiod off"></span>';
+  var over = c.periodLeft < 0;
+  var pctv = clamp(num(c.periodPct), 0, 100).toFixed(1);
+  return '<span class="pperiod">' +
+    '<span class="pperiod-main"><em class="pbadge ' + c.period + '">' + periodLabel(c.period) + '</em>' +
+    '<b class="' + (over ? 'neg' : '') + '">' + fmt(c.periodActual) + '</b>' +
+    '<span class="pslash">/</span><span class="palloc">' + fmt(c.periodBudget) + '</span></span>' +
+    '<span class="pperiod-sub">전월까지 ' + fmt(c.periodPrior) + ' · 잔여 <b class="' + (over ? 'neg' : '') + '">' +
+    fmt(c.periodLeft) + '</b></span>' +
+    '<span class="pbar-mini pperiod-bar"><i class="' + (over ? 'over' : '') + '" style="width:' + pctv + '%"></i></span>' +
+    '</span>';
+}
+function periodTotalCell(t) {
+  if (!t.periodCount) return '<span class="pperiod off"></span>';
+  var over = t.periodLeft < 0;
+  var pctv = clamp(num(t.periodPct), 0, 100).toFixed(1);
+  return '<span class="pperiod total">' +
+    '<span class="pperiod-main"><em class="pbadge all">기간</em>' +
+    '<b class="' + (over ? 'neg' : '') + '">' + fmt(t.periodActual) + '</b>' +
+    '<span class="pslash">/</span><span class="palloc">' + fmt(t.periodBudget) + '</span></span>' +
+    '<span class="pperiod-sub">전월까지 ' + fmt(t.periodPrior) + ' · 잔여 <b class="' + (over ? 'neg' : '') + '">' +
+    fmt(t.periodLeft) + '</b></span>' +
+    '<span class="pbar-mini pperiod-bar"><i class="' + (over ? 'over' : '') + '" style="width:' + pctv + '%"></i></span>' +
+    '</span>';
+}
 function viewSummary() {
   var roll = rolloverTable(ui.month);
   var inc = incomeTable(ui.month);
@@ -2464,11 +2657,13 @@ function viewSummary() {
     '</div>' +
     '</section>';
 
+  var hasPeriod = roll.cats.some(function (c) { return c.periodBudget > 0; });
   var catCard = '<section class="card catcard">' +
     '<div class="card-head"><h2>카테고리별 계획 · 이월</h2>' +
     '<button type="button" class="linkbtn" data-act="openBudget">예산 설정</button></div>' +
-    '<div class="ptable">' +
-    '<div class="ptable-head"><span>카테고리</span><span>기본예산</span><span>전월이월</span><span>한도</span><span>실제</span><span>남은돈</span></div>' +
+    '<div class="ptable' + (hasPeriod ? ' hasperiod' : '') + '">' +
+    '<div class="ptable-head"><span>카테고리</span><span>기본예산</span><span>전월이월</span><span>한도</span><span>실제</span><span>남은돈</span>' +
+    (hasPeriod ? '<span>기간 할당 <em>누적 / 예산</em></span>' : '') + '</div>' +
     roll.cats.map(function (c) {
       return '<div class="prow" data-cat="' + c.id + '">' +
         '<span class="pname"><i class="dot" style="background:' + catColor(c.id) + '"></i>' + esc(c.name) +
@@ -2479,6 +2674,7 @@ function viewSummary() {
         '<span class="pnum">' + fmt(c.actual) + '</span>' +
         '<span class="pnum ' + (c.left < 0 ? 'neg' : 'pos') + '"><b>' + signed(c.left) + '</b></span>' +
         '<span class="pbar-mini"><i style="width:' + (c.limit ? clamp(c.actual / c.limit * 100, 0, 100).toFixed(1) : 0) + '%"></i></span>' +
+        (hasPeriod ? periodCell(c) : '') +
         '</div>';
     }).join('') +
     '<div class="prow ptotal"><span class="pname">합계</span>' +
@@ -2487,9 +2683,11 @@ function viewSummary() {
     '<span class="pnum">' + fmt(roll.total.limit) + '</span>' +
     '<span class="pnum">' + fmt(roll.total.actual) + '</span>' +
     '<span class="pnum ' + (roll.total.left < 0 ? 'neg' : 'pos') + '"><b>' + signed(roll.total.left) + '</b></span>' +
-    '<span class="pbar-mini"></span></div>' +
+    '<span class="pbar-mini"></span>' +
+    (hasPeriod ? periodTotalCell(roll.total) : '') + '</div>' +
     '</div>' +
-    '<p class="table-note">이월은 ' + monthLabel(roll.start) + '부터 차례로 계산해요. 남은돈이 다음 달 한도에 더해집니다.</p>' +
+    '<p class="table-note">이월은 ' + monthLabel(roll.start) + '부터 차례로 계산해요. 남은돈이 다음 달 한도에 더해집니다.' +
+    (hasPeriod ? '' : ' 분기·1년 할당 예산을 정하면 월 예산과 별도로 그 기간 누적을 같이 보여 드려요.') + '</p>' +
     '</section>';
 
   return monthBar() + '<div class="dash">' +
@@ -2776,7 +2974,9 @@ function txSheet() {
 function budgetSheet() {
   if (!ui.draft) {
     ui.draft = {
-      cats: state.cats.map(function (c) { return Object.assign({}, c); }),
+      cats: state.cats.map(function (c) {
+        return Object.assign({ period: '', periodBudget: 0 }, c, { period: periodKey(c.period) });
+      }),
       settings: Object.assign({}, state.settings)
     };
   }
@@ -2786,7 +2986,9 @@ function budgetSheet() {
 
   function row(i, c) {
     var isInc = c.kind === 'income';
-    return '<div class="catrow" data-row="' + i + '">' +
+    var period = periodKey(c.period);
+    var pbudget = Math.max(0, int(c.periodBudget));
+    return '<div class="catrow' + (!isInc && period ? ' hasperiod' : '') + '" data-row="' + i + '">' +
       '<input class="catname" data-field="name" data-idx="' + i + '" value="' + esc(c.name) + '" aria-label="카테고리 이름">' +
       '<input class="catbudget" data-field="' + (isInc ? 'plan' : 'budget') + '" data-idx="' + i + '" data-money inputmode="numeric" ' +
       'value="' + (num(isInc ? c.plan : c.budget) ? fmt(isInc ? c.plan : c.budget) : '') + '" placeholder="0" aria-label="월 예산">' +
@@ -2794,6 +2996,17 @@ function budgetSheet() {
         : '<button type="button" class="toggle' + (c.roll ? ' on' : '') + '" data-act="toggleRoll" data-idx="' + i + '" ' +
         'aria-pressed="' + (c.roll ? 'true' : 'false') + '">이월</button>') +
       '<button type="button" class="iconbtn tiny" data-act="delCat" data-idx="' + i + '" aria-label="카테고리 삭제">✕</button>' +
+      (isInc ? '' : '<div class="periodcell">' +
+        '<span class="plbl">기간 할당</span>' +
+        '<select class="catperiod" data-act="setCatPeriod" data-idx="' + i + '" aria-label="기간 할당 주기">' +
+        '<option value=""' + (period ? '' : ' selected') + '>없음</option>' +
+        '<option value="quarter"' + (period === 'quarter' ? ' selected' : '') + '>분기</option>' +
+        '<option value="year"' + (period === 'year' ? ' selected' : '') + '>1년</option>' +
+        '</select>' +
+        '<input class="catperiodamt" data-field="periodBudget" data-idx="' + i + '" data-money inputmode="numeric" ' +
+        'value="' + (period && pbudget ? fmt(pbudget) : '') + '" placeholder="' + (period ? '0' : '—') + '"' +
+        (period ? '' : ' disabled') + ' aria-label="기간 할당 예산">' +
+        '</div>') +
       '</div>';
   }
 
@@ -2816,10 +3029,11 @@ function budgetSheet() {
     '<p class="hintline">기초 누적 저축을 넣으면 누적 저축이 실제 통장 잔액과 맞아요.</p>' +
     '</div>' +
     '<div class="sect">' +
-    '<h3>지출 카테고리 <em>예산 · 다음 달 이월</em></h3>' +
+    '<h3>지출 카테고리 <em>예산 · 이월 · 기간 할당</em></h3>' +
     '<div class="cathead"><span>이름</span><span>월 예산</span><span>이월</span><span></span></div>' +
     expIdx.map(function (i) { return row(i, d.cats[i]); }).join('') +
     '<button type="button" class="btn ghost sm addcat" data-act="addCat" data-kind="expense">' + icon('plus', 15) + '카테고리 추가</button>' +
+    '<p class="hintline">기간 할당에 <b>분기</b>나 <b>1년</b>을 고르고 금액을 넣으면, 월 예산과 별도로 그 기간에 얼마 썼는지 누적으로 보여 드려요.</p>' +
     '</div>' +
     '<div class="sect">' +
     '<h3>수입 카테고리 <em>계획</em></h3>' +
@@ -3084,9 +3298,15 @@ function submitBudget(form) {
   d.settings.initialSavings = int(v.initialSavings);
   d.settings.startMonth = isMonthKey(v.startMonth) ? v.startMonth : '';
   state.cats = d.cats.map(function (c) {
-    return c.kind === 'income'
-      ? { id: c.id, kind: 'income', name: c.name, plan: Math.max(0, int(c.plan)) }
-      : { id: c.id, kind: 'expense', name: c.name, budget: Math.max(0, int(c.budget)), roll: c.roll !== false };
+    if (c.kind === 'income') return { id: c.id, kind: 'income', name: c.name, plan: Math.max(0, int(c.plan)) };
+    var period = periodKey(c.period);
+    var pbudget = Math.max(0, int(c.periodBudget));
+    if (!period || !pbudget) { period = ''; pbudget = 0; }
+    return {
+      id: c.id, kind: 'expense', name: c.name,
+      budget: Math.max(0, int(c.budget)), roll: c.roll !== false,
+      period: period, periodBudget: pbudget
+    };
   });
   if (!state.cats.some(function (c) { return c.kind === 'income'; })) {
     defaultCats().filter(function (c) { return c.kind === 'income'; }).forEach(function (c) { state.cats.push(c); });
@@ -3235,14 +3455,32 @@ var actions = {
     node.classList.toggle('on', !!c.roll);
     node.setAttribute('aria-pressed', c.roll ? 'true' : 'false');
   },
+  /* 기간 할당 주기 — 시트를 다시 그리지 않고 그 줄만 바꿔치기(입력 중이던 값·스크롤 유지) */
+  setCatPeriod: function (d, node) {
+    var i = int(d.idx);
+    var c = ui.draft && ui.draft.cats[i];
+    if (!c) return;
+    var v = node && node.value;
+    c.period = periodKey(v);
+    if (!c.period) c.periodBudget = 0;
+    var row = node && node.closest ? node.closest('.catrow') : null;
+    if (row) {
+      row.classList.toggle('hasperiod', !!c.period);
+      var amt = row.querySelector('.catperiodamt');
+      if (amt) {
+        amt.disabled = !c.period;
+        amt.placeholder = c.period ? '0' : '—';
+        if (!c.period) amt.value = '';
+      }
+    }
+  },
   addCat: function (d) {
     var kind = d.kind === 'income' ? 'income' : 'expense';
     var form = currentForm();
-    var v = form ? formValues(form) : {};
     if (form) syncDraftFromForm(form);
     ui.draft.cats.push(kind === 'income'
       ? { id: 'n' + uid().slice(0, 6), kind: 'income', name: '새 수입', plan: 0 }
-      : { id: 'n' + uid().slice(0, 6), kind: 'expense', name: '새 카테고리', budget: 0, roll: true });
+      : { id: 'n' + uid().slice(0, 6), kind: 'expense', name: '새 카테고리', budget: 0, roll: true, period: '', periodBudget: 0 });
     renderSheet();
   },
   delCat: function (d) {
@@ -3394,6 +3632,13 @@ function syncDraftFromForm(form) {
     if (field === 'name') c.name = String(f.value || '').slice(0, 20);
     else c[field] = Math.max(0, int(String(f.value || '').replace(/[^0-9]/g, '')));
   });
+  Array.prototype.forEach.call(form.querySelectorAll('[data-act="setCatPeriod"]'), function (sel) {
+    var i = int(sel.getAttribute('data-idx'));
+    var c = ui.draft.cats[i];
+    if (!c) return;
+    c.period = periodKey(sel.value);
+    if (!c.period) c.periodBudget = 0;
+  });
   var maxSpend = document.querySelector('#sheetroot [name="maxSpend"]');
   var initial = document.querySelector('#sheetroot [name="initialSavings"]');
   var start = document.querySelector('#sheetroot [name="startMonth"]');
@@ -3434,7 +3679,7 @@ document.addEventListener('change', function (e) {
     return;
   }
   var act = node.getAttribute && node.getAttribute('data-act');
-  if (act === 'setFilterCat' || act === 'setFilterPay') {
+  if (act === 'setFilterCat' || act === 'setFilterPay' || act === 'setCatPeriod') {
     actions[act](node.dataset || {}, node);
   }
 });
@@ -3602,6 +3847,8 @@ window.__budgetApp = {
   normalizePayMethods: normalizePayMethods,
   addLoan: addLoan, updateLoan: updateLoan, delLoan: delLoan, repayLoan: repayLoan,
   rolloverTable: rolloverTable, incomeTable: incomeTable, savingsTable: savingsTable, savingsOf: savingsOf,
+  periodStatsOf: periodStatsOf, periodStartOf: periodStartOf, periodLabel: periodLabel, periodKey: periodKey,
+  expenseSumsByMonth: expenseSumsByMonth,
   loanSummary: loanSummary, monthTotals: monthTotals, loanMonthly: loanMonthly,
   xlsxBytes: xlsxBytes, xlsxSheets: xlsxSheets, csvText: csvText,
   exportXlsx: exportXlsx, exportCsv: exportCsv, exportJson: exportJson,
